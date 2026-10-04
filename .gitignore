@@ -7,3 +7,4 @@ dist/
 simulation.db
 .DS_Store
 coverage/
+.tools/
