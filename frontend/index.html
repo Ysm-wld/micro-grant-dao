@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="A local simulation of micro-grant DAO governance, treasury allocation, and blockchain audit trails."
+    />
+    <title>Ledgerroom | Micro-Grant DAO Simulation</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand-lockup">
+          <div class="brand-mark" aria-hidden="true">LR</div>
+          <div>
+            <p class="brand-name">Ledgerroom</p>
+            <p class="brand-subtitle">Micro-grant governance lab</p>
+          </div>
+        </div>
+        <div class="simulation-status" role="status" aria-live="polite">
+          <span class="status-dot"></span
+          ><span
+            ><strong>LOCAL SIMULATION</strong
+            ><small>No real blockchain or funds</small></span
+          >
+        </div>
+        <div class="account-control">
+          <label for="accountSelect">Acting as</label
+          ><select id="accountSelect" aria-label="Choose a simulated account">
+            <option>Loading accounts...</option>
+          </select>
+        </div>
+      </header>
+      <div class="workspace">
+        <aside class="sidebar" aria-label="Primary navigation">
+          <div class="sidebar-intro">
+            <span class="overline">Simulation epoch 01</span>
+            <p>Trace every decision from proposal to confirmed event.</p>
+          </div>
+          <nav class="nav-list">
+            <button class="nav-item active" data-view="overview">
+              <span>01</span>Overview</button
+            ><button class="nav-item" data-view="grants">
+              <span>02</span>Grants</button
+            ><button class="nav-item" data-view="governance">
+              <span>03</span>Governance</button
+            ><button class="nav-item" data-view="treasury">
+              <span>04</span>Treasury</button
+            ><button class="nav-item" data-view="audit">
+              <span>05</span>Audit explorer
+            </button>
+          </nav>
+          <div class="sidebar-note">
+            <span class="overline">Why this exists</span>
+            <p>
+              A transparent local model of collective funding decisions,
+              transaction lifecycles, and append-only history.
+            </p>
+          </div>
+        </aside>
+        <main id="main-content" class="main-content" tabindex="-1">
+          <div id="globalAlert" class="alert" role="alert" hidden></div>
+          <section
+            id="view-overview"
+            class="view active-view"
+            aria-labelledby="overview-title"
+          >
+            <div class="page-heading">
+              <div>
+                <span class="overline">Control room / overview</span>
+                <h1 id="overview-title">A grant decision, made inspectable.</h1>
+                <p>
+                  Follow the health of the local DAO simulation and see where
+                  proposals are waiting for a decision.
+                </p>
+              </div>
+              <button class="button button-secondary" data-action="refresh">
+                Refresh state
+              </button>
+            </div>
+            <div id="metrics" class="metric-grid" aria-live="polite"></div>
+            <div class="content-grid overview-grid">
+              <section
+                class="surface feature-surface"
+                aria-labelledby="pipeline-title"
+              >
+                <div class="section-heading">
+                  <div>
+                    <span class="overline">Decision pipeline</span>
+                    <h2 id="pipeline-title">Grant activity</h2>
+                  </div>
+                  <button class="text-button" data-view-link="grants">
+                    View all grants <span aria-hidden="true">-></span>
+                  </button>
+                </div>
+                <div id="overviewGrants" class="stack-list"></div>
+              </section>
+              <section class="surface" aria-labelledby="chain-title">
+                <div class="section-heading">
+                  <div>
+                    <span class="overline">Simulated chain</span>
+                    <h2 id="chain-title">Latest activity</h2>
+                  </div>
+                  <button class="text-button" data-view-link="audit">
+                    Open explorer <span aria-hidden="true">-></span>
+                  </button>
+                </div>
+                <div id="overviewActivity" class="stack-list"></div>
+              </section>
+            </div>
+            <section
+              class="surface lifecycle-surface"
+              aria-labelledby="lifecycle-title"
+            >
+              <div class="section-heading">
+                <div>
+                  <span class="overline">How state moves</span>
+                  <h2 id="lifecycle-title">Grant lifecycle</h2>
+                </div>
+                <p class="section-meta">
+                  Domain state + simulated transaction + audit event
+                </p>
+              </div>
+              <ol class="lifecycle">
+                <li class="is-current">
+                  <span>01</span><strong>Submit</strong
+                  ><small>Proposal enters review</small>
+                </li>
+                <li>
+                  <span>02</span><strong>Govern</strong
+                  ><small>Members review and vote</small>
+                </li>
+                <li>
+                  <span>03</span><strong>Fund</strong
+                  ><small>Treasury allocation confirms</small>
+                </li>
+                <li>
+                  <span>04</span><strong>Verify</strong
+                  ><small>Milestone evidence is checked</small>
+                </li>
+                <li>
+                  <span>05</span><strong>Complete</strong
+                  ><small>Outcome is recorded</small>
+                </li>
+              </ol>
+            </section>
+          </section>
+          <section id="view-grants" class="view" aria-labelledby="grants-title">
+            <div class="page-heading">
+              <div>
+                <span class="overline">Grant registry</span>
+                <h1 id="grants-title">Proposals and grants</h1>
+                <p>
+                  Every grant has a state, an owner, and an auditable path
+                  through the simulation.
+                </p>
+              </div>
+              <button class="button button-primary" data-action="open-proposal">
+                New proposal
+              </button>
+            </div>
+            <div class="toolbar">
+              <label class="search-field"
+                ><span aria-hidden="true">⌕</span
+                ><input
+                  id="grantSearch"
+                  type="search"
+                  placeholder="Search proposals"
+                  aria-label="Search proposals" /></label
+              ><select id="grantFilter" aria-label="Filter proposals">
+                <option value="ALL">All states</option>
+                <option value="UNDER_REVIEW">Under review</option>
+                <option value="VOTING">Voting</option>
+                <option value="APPROVED">Approved</option>
+                <option value="REJECTED">Rejected</option>
+              </select>
+            </div>
+            <div id="grantList" class="grant-list"></div>
+          </section>
+          <section
+            id="view-governance"
+            class="view"
+            aria-labelledby="governance-title"
+          >
+            <div class="page-heading">
+              <div>
+                <span class="overline">Collective decision layer</span>
+                <h1 id="governance-title">Governance workspace</h1>
+                <p>
+                  Review eligibility, voting rules, and the evidence behind each
+                  decision.
+                </p>
+              </div>
+            </div>
+            <div id="governanceContent"></div>
+          </section>
+          <section
+            id="view-treasury"
+            class="view"
+            aria-labelledby="treasury-title"
+          >
+            <div class="page-heading">
+              <div>
+                <span class="overline">Resource allocation</span>
+                <h1 id="treasury-title">Treasury ledger</h1>
+                <p>
+                  Simulated funds are tracked as available, reserved, and
+                  released balances.
+                </p>
+              </div>
+            </div>
+            <div id="treasuryContent"></div>
+          </section>
+          <section id="view-audit" class="view" aria-labelledby="audit-title">
+            <div class="page-heading">
+              <div>
+                <span class="overline">Append-only inspection</span>
+                <h1 id="audit-title">Audit explorer</h1>
+                <p>
+                  Connect a domain action to its simulated transaction, block,
+                  and emitted events.
+                </p>
+              </div>
+              <button class="button button-secondary" data-action="refresh">
+                Refresh explorer
+              </button>
+            </div>
+            <div class="audit-tabs" role="tablist">
+              <button
+                class="audit-tab active"
+                data-audit-tab="transactions"
+                role="tab"
+              >
+                Transactions</button
+              ><button class="audit-tab" data-audit-tab="blocks" role="tab">
+                Blocks</button
+              ><button class="audit-tab" data-audit-tab="events" role="tab">
+                Events
+              </button>
+            </div>
+            <div id="auditContent"></div>
+          </section>
+        </main>
+      </div>
+    </div>
+    <dialog id="proposalDialog" class="dialog" aria-labelledby="dialog-title">
+      <form id="proposalForm" method="dialog">
+        <div class="dialog-heading">
+          <div>
+            <span class="overline">Applicant action</span>
+            <h2 id="dialog-title">Submit a proposal</h2>
+          </div>
+          <button class="icon-button" value="cancel" aria-label="Close dialog">
+            ×
+          </button>
+        </div>
+        <p class="dialog-copy">
+          Submission creates a simulated transaction and places the proposal in
+          the review queue.
+        </p>
+        <div class="form-grid">
+          <label
+            >Title<input
+              name="title"
+              required
+              maxlength="120"
+              placeholder="e.g. Community repair lab" /></label
+          ><label
+            >Category<input
+              name="category"
+              required
+              maxlength="80"
+              placeholder="Education, research, community" /></label
+          ><label class="wide"
+            >Description<textarea
+              name="description"
+              required
+              maxlength="5000"
+              rows="4"
+              placeholder="What will the grant make possible?"
+            ></textarea></label
+          ><label
+            >Requested amount<input
+              name="requestedAmount"
+              required
+              type="number"
+              min="1"
+              step="1"
+              placeholder="1000" /></label
+          ><label
+            >Milestone title<input
+              name="milestoneTitle"
+              required
+              maxlength="160"
+              placeholder="Prototype delivered" /></label
+          ><label
+            >Milestone amount<input
+              name="milestoneAmount"
+              required
+              type="number"
+              min="1"
+              step="1"
+              placeholder="1000"
+          /></label>
+        </div>
+        <div id="formError" class="form-error" role="alert" hidden></div>
+        <div class="dialog-actions">
+          <button class="button button-secondary" value="cancel">Cancel</button
+          ><button class="button button-primary" value="submit">
+            Submit proposal
+          </button>
+        </div>
+      </form>
+    </dialog>
+    <div
+      id="toastRegion"
+      class="toast-region"
+      aria-live="polite"
+      aria-atomic="true"
+    ></div>
+    <script src="app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,274 @@
+# This file is the orchestration map for the course workspace.
+# The key design choice is:
+# - use official images directly
+# - mount the workspace into the containers
+# - keep dependencies in named volumes
+# This means normal code edits are picked up on the next `docker compose up`
+# without rebuilding custom images for routine lab work.
+
+services:
+  # `chain` is the local Ethereum-like blockchain node.
+  # Hardhat runs here and exposes JSON-RPC on port 8545.
+  chain:
+    image: node:20-alpine
+    container_name: bc-lab1-chain
+    working_dir: /workspace/labs/lab1/blockchain
+    command: sh -c "npm install && npx hardhat node --hostname 0.0.0.0"
+    ports:
+      - "8545:8545"
+    volumes:
+      - .:/workspace
+      - blockchain_node_modules:/workspace/labs/lab1/blockchain/node_modules
+
+  # `deployer` is a one-shot service.
+  # It compiles the contracts, deploys them to the running chain,
+  # and writes the deployed addresses into the deployments folder.
+  deployer:
+    image: node:20-alpine
+    container_name: bc-lab1-deployer
+    working_dir: /workspace/labs/lab1/blockchain
+    command: sh -c "apk add --no-cache gcompat && chmod +x /root/.cache/hardhat-nodejs/compilers-v2/linux-amd64/* && npm install && npx hardhat compile && npx hardhat run scripts/deploy.js --network localhost"
+    environment:
+      HARDHAT_NETWORK: localhost
+      RPC_URL: http://chain:8545
+    depends_on:
+      - chain
+    volumes:
+      - .:/workspace
+      - blockchain_node_modules:/workspace/labs/lab1/blockchain/node_modules
+      - ./infra/solc-cache:/root/.cache/hardhat-nodejs/compilers-v2
+
+  # `api` is intentionally local-only for the simulation.
+  # Never place a real wallet or production RPC secret here.
+  api:
+    image: node:20-alpine
+    container_name: bc-lab1-api
+    working_dir: /workspace/labs/lab1/api
+    command: sh -c "npm install && node src/server.js"
+    environment:
+      PORT: 3000
+      RPC_URL: http://chain:8545
+      CHAIN_ID: 31337
+      LAB_ROOT: /workspace/labs/lab1
+      ADMIN_PRIVATE_KEY: "SIMULATION_ONLY_PLACEHOLDER"
+    depends_on:
+      - chain
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/workspace
+      - lab1_api_node_modules:/workspace/labs/lab1/api/node_modules
+
+  # `frontend` serves the static working UI with nginx.
+  # You open this in the browser to read state, send transactions,
+  # and watch the live visualization.
+  frontend:
+    image: nginx:1.27-alpine
+    container_name: bc-lab1-frontend
+    depends_on:
+      - api
+    ports:
+      - "8080:80"
+    volumes:
+      - ./labs/lab1/frontend:/usr/share/nginx/html:ro
+
+  # `lab2-api` works local accounts, balances, nonces, and transfers.
+  # It talks directly to the Hardhat node without deploying contracts yet.
+  lab2-api:
+    image: node:20-alpine
+    container_name: bc-lab2-api
+    working_dir: /workspace/labs/lab2/api
+    command: sh -c "npm install && node src/server.js"
+    environment:
+      PORT: 3001
+      RPC_URL: http://chain:8545
+    depends_on:
+      - chain
+    ports:
+      - "3001:3001"
+    volumes:
+      - .:/workspace
+      - lab2_api_node_modules:/workspace/labs/lab2/api/node_modules
+
+  # `lab2-frontend` is the visual UI for account state and local ETH transfers.
+  lab2-frontend:
+    image: nginx:1.27-alpine
+    container_name: bc-lab2-frontend
+    depends_on:
+      - lab2-api
+    ports:
+      - "8081:80"
+    volumes:
+      - ./labs/lab2/frontend:/usr/share/nginx/html:ro
+
+  # `lab3-deployer` compiles and deploys the voting contract for Lab 3.
+  # It writes deployment metadata that the Lab 3 API and frontend consume later.
+  lab3-deployer:
+    image: node:20-alpine
+    container_name: bc-lab3-deployer
+    working_dir: /workspace/labs/lab3/blockchain
+    command: sh -c "apk add --no-cache gcompat && chmod +x /root/.cache/hardhat-nodejs/compilers-v2/linux-amd64/* && npm install && npx hardhat compile && npx hardhat run scripts/deploy.js --network localhost"
+    environment:
+      HARDHAT_NETWORK: localhost
+      RPC_URL: http://chain:8545
+    depends_on:
+      - chain
+    volumes:
+      - .:/workspace
+      - lab3_blockchain_node_modules:/workspace/labs/lab3/blockchain/node_modules
+      - ./infra/solc-cache:/root/.cache/hardhat-nodejs/compilers-v2
+
+  # `lab3-api` is the bridge between the voting contract and the Lab 3 UI.
+  # It reads proposals, voter state, and vote history, and signs vote transactions.
+  lab3-api:
+    image: node:20-alpine
+    container_name: bc-lab3-api
+    working_dir: /workspace/labs/lab3/api
+    command: sh -c "npm install && node src/server.js"
+    environment:
+      PORT: 3002
+      RPC_URL: http://chain:8545
+      LAB_ROOT: /workspace/labs/lab3
+    depends_on:
+      - chain
+    ports:
+      - "3002:3002"
+    volumes:
+      - .:/workspace
+      - lab3_api_node_modules:/workspace/labs/lab3/api/node_modules
+
+  # `lab3-frontend` is the classroom UI for the decentralized voting lab.
+  lab3-frontend:
+    image: nginx:1.27-alpine
+    container_name: bc-lab3-frontend
+    depends_on:
+      - lab3-api
+    ports:
+      - "8082:80"
+    volumes:
+      - ./labs/lab3/frontend:/usr/share/nginx/html:ro
+
+  # `lab4-deployer` compiles and deploys the certificate registry for Lab 4.
+  # It also issues one sample certificate so verification has data immediately.
+  lab4-deployer:
+    image: node:20-alpine
+    container_name: bc-lab4-deployer
+    working_dir: /workspace/labs/lab4/blockchain
+    command: sh -c "apk add --no-cache gcompat && chmod +x /root/.cache/hardhat-nodejs/compilers-v2/linux-amd64/* && npm install && npx hardhat compile && npx hardhat run scripts/deploy.js --network localhost"
+    environment:
+      HARDHAT_NETWORK: localhost
+      RPC_URL: http://chain:8545
+    depends_on:
+      - chain
+    volumes:
+      - .:/workspace
+      - lab4_blockchain_node_modules:/workspace/labs/lab4/blockchain/node_modules
+      - ./infra/solc-cache:/root/.cache/hardhat-nodejs/compilers-v2
+
+  # `lab4-api` bridges the certificate registry contract and proof table to the UI.
+  lab4-api:
+    image: node:20-alpine
+    container_name: bc-lab4-api
+    working_dir: /workspace/labs/lab4/api
+    command: sh -c "npm install && node src/server.js"
+    environment:
+      PORT: 3003
+      RPC_URL: http://chain:8545
+      LAB_ROOT: /workspace/labs/lab4
+    depends_on:
+      - chain
+    ports:
+      - "3003:3003"
+    volumes:
+      - .:/workspace
+      - lab4_api_node_modules:/workspace/labs/lab4/api/node_modules
+
+  # `lab4-frontend` is the UI for certificate issuing, verifying, revoking, and proofs.
+  lab4-frontend:
+    image: nginx:1.27-alpine
+    container_name: bc-lab4-frontend
+    depends_on:
+      - lab4-api
+    ports:
+      - "8083:80"
+    volumes:
+      - ./labs/lab4/frontend:/usr/share/nginx/html:ro
+
+  # `lab5-deployer` compiles and deploys the Lab 5 DAO contract to the shared chain.
+  # It writes deployment metadata that the Lab 5 API and frontend consume next.
+  lab5-deployer:
+    image: node:20-alpine
+    container_name: bc-lab5-deployer
+    working_dir: /workspace/labs/lab5/blockchain
+    command: sh -c "apk add --no-cache gcompat && chmod +x /root/.cache/hardhat-nodejs/compilers-v2/linux-amd64/* && npm install && npx hardhat compile && npx hardhat run scripts/deploy.js --network localhost"
+    environment:
+      HARDHAT_NETWORK: localhost
+      RPC_URL: http://chain:8545
+    depends_on:
+      - chain
+    volumes:
+      - .:/workspace
+      - lab5_blockchain_node_modules:/workspace/labs/lab5/blockchain/node_modules
+      - ./infra/solc-cache:/root/.cache/hardhat-nodejs/compilers-v2
+
+  # `lab5-api` bridges the deployed DAO contract and the Lab 5 frontend.
+  # It exposes HTTP endpoints that the browser uses for proposal data, treasury state, and deployment info.
+  lab5-api:
+    image: node:20-alpine
+    container_name: bc-lab5-api
+    working_dir: /workspace/labs/lab5/api
+    command: sh -c "npm install && node src/server.js"
+    environment:
+      PORT: 3004
+      RPC_URL: http://chain:8545
+      LAB_ROOT: /workspace/labs/lab5
+    depends_on:
+      - chain
+    ports:
+      - "3004:3004"
+    volumes:
+      - .:/workspace
+      - lab5_api_node_modules:/workspace/labs/lab5/api/node_modules
+
+  # `lab5-frontend` serves the static dashboard and loads the Lab 5 frontend assets.
+  # It depends on lab5-api so the page can request live contract and DAO state.
+  lab5-frontend:
+    image: nginx:1.27-alpine
+    container_name: bc-lab5-frontend
+    depends_on:
+      - lab5-api
+    ports:
+      - "8084:80"
+    volumes:
+      - ./labs/lab5/frontend:/usr/share/nginx/html:ro
+
+  # `pythonlab` is the concept demo environment.
+  # It stays running so the Python blockchain explanation script can be executed on demand.
+  pythonlab:
+    image: python:3.12-alpine
+    container_name: bc-lab1-python
+    working_dir: /workspace/labs/lab1/python
+    command: tail -f /dev/null
+    volumes:
+      - .:/workspace
+
+  # `dev` is an extra utility container for manual exploration or future lab work.
+  dev:
+    image: node:20-alpine
+    container_name: bc-lab1-dev
+    working_dir: /workspace
+    command: tail -f /dev/null
+    volumes:
+      - .:/workspace
+      - blockchain_node_modules:/workspace/labs/lab1/blockchain/node_modules
+
+volumes:
+  blockchain_node_modules:
+  lab1_api_node_modules:
+  lab2_api_node_modules:
+  lab3_blockchain_node_modules:
+  lab3_api_node_modules:
+  lab4_blockchain_node_modules:
+  lab4_api_node_modules:
+  lab5_blockchain_node_modules:
+  lab5_api_node_modules:
